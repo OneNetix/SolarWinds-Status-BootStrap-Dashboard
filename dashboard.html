@@ -102,6 +102,8 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 
   <script>
+  //Change the value of this variable to what team specific results you want to see
+  var Team = "X";
    setInterval(function(){
                 $('blink').each(function() {
                 $(this).toggle();
@@ -111,8 +113,9 @@
         //Main table function
         function getApplications() {
 
-            //Query the nodes custom properties table for applications where team = X change X to be based on what team specific results you want to see
-            var getAppQuery = JSON.stringify({query:"SELECT DISTINCT Applications FROM Orion.NodesCustomProperties WHERE Team = 'X' AND Applications IS NOT NULL"} ); 
+            //This step queries the nodes custom properties table for Device Role where Team equals whatever you have defined in that variable.
+            
+            var getAppQuery = JSON.stringify({query:"SELECT DISTINCT Device_Role FROM Orion.NodesCustomProperties WHERE Team = '"+Team+"' AND Device_Role IS NOT NULL"} ); 
                     $.ajax({
                     type: 'POST', 
                     url: '/Orion/Services/Information.asmx/Query', 
@@ -125,10 +128,10 @@
                     var headerResult = ''
                     headerName = [];
                     appCard = [];
-        
+
                     //Loop through results, for each result query the application name to get the app status
                     for (i = 0; i < appResponse.d.Rows.length; i++) {
-                        var appStatus = JSON.stringify({query:"SELECT StatusName, case when Color = 'yellow' then 'text-warning' when Color = 'red' then 'text-danger' when Color = 'darkblue' then 'text-primary' when Color = 'lightgreen' then 'text-success' when Color = 'darkred' then 'text-danger' else Color end as Color, case when count(n.status) is null then 0 else count(n.status) end as num, case when statusname = 'down' then 100 when statusname = 'critical' then 50 when statusname = 'warning' then 45 when statusname = 'unmanaged' then 40 when statusname = 'up' then 39 end as fsize FROM Orion.StatusInfo s left join Orion.Nodes n on s.statusid=n.status left join Orion.NodesCustomProperties as cp on cp.NodeID = n.NodeID where cp.Applications = '"+appResponse.d.Rows[i]+"' AND s.statusid in (1,2,3,9,14) group by StatusName, Color order by fsize desc, num desc"} ); 
+                        var appStatus = JSON.stringify({query:"SELECT StatusName, case when Color = 'yellow' then 'text-warning' when Color = 'red' then 'text-danger' when Color = 'darkblue' then 'text-primary' when Color = 'lightgreen' then 'text-success' when Color = 'darkred' then 'text-danger' else Color end as Color, case when count(n.status) is null then 0 else count(n.status) end as num, case when statusname = 'down' then 100 when statusname = 'critical' then 50 when statusname = 'warning' then 45 when statusname = 'unmanaged' then 40 when statusname = 'up' then 39 end as fsize FROM Orion.StatusInfo s left join Orion.Nodes n on s.statusid=n.status left join Orion.NodesCustomProperties as cp on cp.NodeID = n.NodeID where cp.Device_Role = '"+appResponse.d.Rows[i]+"' AND cp.Team = '"+Team+"' AND s.statusid in (1,2,3,9,14) group by StatusName, Color order by fsize desc, num desc"} ); 
                             $.ajax({
                             type: 'POST', 
                             url: '/Orion/Services/Information.asmx/Query', 
@@ -183,20 +186,18 @@
                         document.getElementById("statusCard").innerHTML = text;
                         var outputApp = appResult
                        
-
                     }
             })
-
-            
+     
         }
 
-    </script>
-    <script>
         //This function is called when you click a card, this will display a new card at the bottom of the page to show nodes that reside under the clicked status
         function getvalue(clicked_id)
             {
                 // Get the modal
                 var modal = document.getElementById("myModal");
+
+                var detailTeam = Team;
 
                 // Get the <span> element that closes the modal
                 var span = document.getElementsByClassName("close")[0];
@@ -210,12 +211,12 @@
 
                 // When the user clicks anywhere outside of the modal, close it
                 window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
+                  if (event.target == modal) {
+                      modal.style.display = "none";
+                  }
                 }
 
-                var devices = JSON.stringify({query:"SELECT '/Orion/images/StatusIcons/small-' + ToString(N.StatusIcon) AS [Status],'/NetPerfMon/Images/Vendors/' + ToString(N.VendorIcon) AS [Vendor],n.Caption AS [Node], n.IP_Address,'/Orion/NetPerfMon/NodeDetails.aspx?NetObject=N%3a' + ToString(N.NodeID) AS [nodeLink] FROM Orion.Nodes as n  LEFT JOIN Orion.NodesCustomProperties as cp on cp.nodeid = n.nodeid WHERE cp.Applications = '"+clicked_id+"'"} ); 
+                var devices = JSON.stringify({query:"SELECT '/Orion/images/StatusIcons/small-' + ToString(N.StatusIcon) AS [Status],'/NetPerfMon/Images/Vendors/' + ToString(N.VendorIcon) AS [Vendor],n.Caption AS [Node], n.IP_Address,'/Orion/NetPerfMon/NodeDetails.aspx?NetObject=N%3a' + ToString(N.NodeID) AS [nodeLink] FROM Orion.Nodes as n  LEFT JOIN Orion.NodesCustomProperties as cp on cp.nodeid = n.nodeid WHERE cp.Device_Role = '"+clicked_id+"' AND Cp.Team = '"+detailTeam+"'"} ); 
                 $.ajax({
                     type: 'POST', 
                     url: '/Orion/Services/Information.asmx/Query', 
@@ -235,8 +236,7 @@
                         var devicesOutput = results
                     }
                 })  
-            }
-            
+            }            
     </script>
 </head>
 
