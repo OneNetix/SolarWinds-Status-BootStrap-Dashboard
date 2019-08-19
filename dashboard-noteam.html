@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ 
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <style>
+  .pointer {
+      cursor: pointer;
+  }
+
+  .square{
+    margin-bottom: 20px;
+    width: 100%;
+    height:160px;
+  }
+
+  /* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #888;
+  width: 80%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  -webkit-animation-name: animatetop;
+  -webkit-animation-duration: 0.4s;
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+
+/* Add Animation */
+@-webkit-keyframes animatetop {
+  from {top:-300px; opacity:0} 
+  to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+  from {top:-300px; opacity:0}
+  to {top:0; opacity:1}
+}
+
+/* The Close Button */
+.close {
+  color: white;
+  float: right;
+  font-size: 23px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-header {
+  padding: 2px 10px;
+  background-color: #2b2b2b;
+  color: white;
+}
+
+.modal-body {padding: 2px 10px;}
+
+.modal-footer {
+  padding: 2px 10px;
+  background-color: #5cb85c;
+  color: white;
+}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+  <script>
+
+   setInterval(function(){
+                $('blink').each(function() {
+                $(this).toggle();
+            });
+        }, 1000);
+
+        //Main table function
+        function getApplications() {
+
+            //This step queries the nodes custom properties table for Device Role where Team equals whatever you have defined in that variable.
+            
+            var getAppQuery = JSON.stringify({query:"SELECT DISTINCT Device_Role FROM Orion.NodesCustomProperties WHERE Device_Role IS NOT NULL ORDER BY Device_Role ASC"} ); 
+                    $.ajax({
+                    type: 'POST', 
+                    url: '/Orion/Services/Information.asmx/Query', 
+                    data: getAppQuery, 
+                    contentType: "application/json; charset=utf-8", 
+                    dataType: "json",
+                    async: false, 
+                    success: function (appResponse) {
+                    var appResult = ''
+                    var headerResult = ''
+                    headerName = [];
+                    appCard = [];
+
+                    //Loop through results, for each result query the application name to get the app status
+                    for (i = 0; i < appResponse.d.Rows.length; i++) {
+                        var appStatus = JSON.stringify({query:"SELECT StatusName, case when Color = 'yellow' then 'text-warning' when Color = 'red' then 'text-danger' when Color = 'darkblue' then 'text-primary' when Color = 'lightgreen' then 'text-success' when Color = 'darkred' then 'text-danger' else Color end as Color, case when count(n.status) is null then 0 else count(n.status) end as num, case when statusname = 'down' then 100 when statusname = 'critical' then 50 when statusname = 'warning' then 45 when statusname = 'unmanaged' then 40 when statusname = 'up' then 39 end as fsize FROM Orion.StatusInfo s left join Orion.Nodes n on s.statusid=n.status left join Orion.NodesCustomProperties as cp on cp.NodeID = n.NodeID where cp.Device_Role = '"+appResponse.d.Rows[i]+"' AND s.statusid in (1,2,3,9,14) group by StatusName, Color order by fsize desc, num desc"} ); 
+                            $.ajax({
+                            type: 'POST', 
+                            url: '/Orion/Services/Information.asmx/Query', 
+                            data: appStatus, 
+                            contentType: "application/json; charset=utf-8", 
+                            dataType: "json",
+                            async: false, 
+                            success: function (appStatusResponse) {
+                            var appStatusHeaderCol = ''
+                            var appStatusName = ''
+                            var i;
+                            headerStatus = [];
+                            bodyStatus = [];
+
+                                //Loop though the application results and build objects for the body of the card resource this will be the qty of each status such as 12 up and 1 down
+                                for (i = 0; i < appStatusResponse.d.Rows.length; i++) {          
+                                    bodyStatus.push('<h5 class="'+appStatusResponse.d.Rows[i][1]+' text-center ">'+appStatusResponse.d.Rows[i][0]+' - '+appStatusResponse.d.Rows[i][2]+'</h5>');
+                                }
+
+                                    //Define header colours and push to an object
+                                    if(appStatusResponse.d.Rows[0][1] == "text-warning"){
+                                        appStatusHeaderCol = appStatusHeaderCol + String('bg-warning');
+                                        headerStatus.push(appStatusHeaderCol);
+                                    }else if(appStatusResponse.d.Rows[0][1] == "text-danger"){
+                                        appStatusHeaderCol = appStatusHeaderCol + String('bg-danger');
+                                        headerStatus.push(appStatusHeaderCol);
+                                    }else{
+                                        appStatusHeaderCol = appStatusHeaderCol + String('bg-success');
+                                        headerStatus.push(appStatusHeaderCol);
+                                    }
+
+                                var outputHeadCol = appStatusHeaderCol
+                            
+                            }
+                            
+                        })
+
+                        //Merge the objects for the status colour and application status quantity and build into a BS card
+                        //Take note of the onclick here, this enables you to click the card and then get the list of nodes that resides under that status
+                        appCard.push("<div class='col-sm-3'><div class='square'><div class='card pointer' id='"+appResponse.d.Rows[i][0]+"' onclick='getvalue(this.id)'><div class='card-header text-white "+ headerStatus +"' ><h5 class='text-center'>"+ appResponse.d.Rows[i][0] + "</h5></div><div class='card-body'>"+ bodyStatus +"</div></div></div></div>"); 
+                        
+                    }
+                        //Loop though the card objects
+                        text = "";
+                        for(i = 0; i < appCard.length; i++){
+                            appCard[i]=appCard[i].replace(",","");
+                            text += appCard[i];
+                        }
+                        
+                        
+                        //Push to results to the card ID in the HTML body
+                        document.getElementById("statusCard").innerHTML = text;
+                        var outputApp = appResult
+                       
+                    }
+            })
+     
+        }
+
+        //This function is called when you click a card, this will display a new card at the bottom of the page to show nodes that reside under the clicked status
+        function getvalue(clicked_id)
+            {
+              document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+                // Get the modal
+                var modal = document.getElementById("myModal");
+
+                var detailTeam = Team;
+
+                // Get the <span> element that closes the modal
+                var span = document.getElementsByClassName("close")[0];
+
+                modal.style.display = "block";
+                
+                // When the user clicks on <span> (x), close the modal
+                span.onclick = function() {
+                modal.style.display = "none";
+                }
+
+                // When the user clicks anywhere outside of the modal, close it
+                window.onclick = function(event) {
+                  if (event.target == modal) {
+                      modal.style.display = "none";
+                  }
+                }
+
+                var devices = JSON.stringify({query:"SELECT '/Orion/images/StatusIcons/small-' + ToString(N.StatusIcon) AS [Status],'/NetPerfMon/Images/Vendors/' + ToString(N.VendorIcon) AS [Vendor],n.Caption AS [Node], n.IP_Address,'/Orion/NetPerfMon/NodeDetails.aspx?NetObject=N%3a' + ToString(N.NodeID) AS [nodeLink] FROM Orion.Nodes as n  LEFT JOIN Orion.NodesCustomProperties as cp on cp.nodeid = n.nodeid WHERE cp.Device_Role = '"+clicked_id+"' "} ); 
+                $.ajax({
+                    type: 'POST', 
+                    url: '/Orion/Services/Information.asmx/Query', 
+                    data: devices, 
+                    contentType: "application/json; charset=utf-8", 
+                    dataType: "json",
+                    async: false, 
+                    success: function (response) {
+                    var results = ''   
+                    var subHeader = ''    
+                        for (i = 0; i < response.d.Rows.length; i++) {
+                            results = results + String('<div><a href="'+response.d.Rows[i][4]+'" target="_blank"><p><img src=' + response.d.Rows[i][0] +'></img> <img src=' + response.d.Rows[i][1] +'></img> ' + response.d.Rows[i][2] + ' - ' +response.d.Rows[i][3] +'</p></a></div>');
+                            document.getElementById("nodes").innerHTML = results;
+                        } 
+                        subHeader = subHeader + String('<h5 class="text-center">'+clicked_id+'</h5>');
+                        document.getElementById("nodeFocusHeader").innerHTML = subHeader;
+                        var devicesOutput = results
+                    }
+                })  
+            }            
+    </script>
+</head>
+
+<!--Load main table funtion-->
+<body onload="getApplications()">
+
+    <!-- BootStrap main table-->
+<div class="container">
+
+       <div class="row">
+            <div id="statusCard"></div>         
+       </div>
+      
+
+</div>
+
+        <div class="col-sm-3">
+
+        </div>
+        <div class="col-sm-3">
+            
+        </div>
+        <div class="col-sm-3">
+            
+        </div>
+
+<!-- Trigger/Open The Modal -->
+
+
+<!-- The Modal -->
+<div id="myModal" class="modal">
+
+  <!-- Modal content -->
+  <div class="modal-content">
+    <div class="modal-header">
+        <div id="nodeFocusHeader"></div>
+      <span class="close">&times;</span>
+    </div>
+    <div class="modal-body">
+        <div id="nodes"></div>
+    </div>
+  </div>
+
+</div>
+
+
+
+</body>
+</html>
